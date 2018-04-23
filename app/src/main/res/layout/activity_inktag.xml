@@ -40,7 +40,7 @@
             app:srcCompat="@drawable/icon_italic" />
 
         <ImageButton
-            android:id="@+id/FontSizeIcon"
+            android:id="@+id/FontOptionIcon"
             android:layout_width="60dp"
             android:layout_height="match_parent"
             android:layout_weight="1"

@@ -44,7 +44,7 @@ import java.util.List;
 
 public class InktagActivity extends AppCompatActivity {
 
-    private ImageButton AddButton,CheckButton,CancelButton,FontChoiceBtn,FontColorBtn;
+    private ImageButton AddButton,CheckButton,CancelButton,FontChoiceBtn,FontOptionButton;
     private RelativeLayout MainStage;
     private InkCanvas can;
     private Uri FocusedImage;
@@ -56,6 +56,8 @@ public class InktagActivity extends AppCompatActivity {
     private float pointerX,pointerY;
     private ListView fonts;
     private Typeface CurrentTypeFace;
+    private AlertDialog.Builder FontChoiceBuild;
+    private AlertDialog FontChoiceDia;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,7 +66,7 @@ public class InktagActivity extends AppCompatActivity {
 
         this.Tags = new ArrayList<TextModule>();
         this.FontList = new ArrayList<FontItem>();
-
+        FontChoiceBuild = new AlertDialog.Builder(InktagActivity.this);
         this.FontList.add(new FontItem("AdmiralCAT",getResources().getFont(R.font.admiralcat)));
         this.FontList.add(new FontItem("Intransitive",getResources().getFont(R.font.intransitive)));
         this.FontList.add(new FontItem("Soccer League",getResources().getFont(R.font.soccerleague)));
@@ -99,20 +101,42 @@ public class InktagActivity extends AppCompatActivity {
     private void InitializeBottomButtons(){
         this.AddButton = (ImageButton) findViewById(R.id.AddTextButton);
         this.FontChoiceBtn = (ImageButton) findViewById(R.id.EditFontButton);
-        this.FontColorBtn = (ImageButton) findViewById(R.id.FontSizeIcon);
+        this.FontOptionButton = (ImageButton) findViewById(R.id.FontOptionIcon);
+
+        this.FontOptionButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                AlertDialog.Builder b = new AlertDialog.Builder(InktagActivity.this);
+                LayoutInflater infl = getLayoutInflater();
+                LinearLayout l = (LinearLayout) infl.inflate(R.layout.font_settings_dialog,null);
+                b.setView(l);
+
+                b.setTitle("Font Options").setPositiveButton("Confirm", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+
+                    }
+                }).setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+
+                    }
+                }).show();
+            }
+        });
 
         this.FontChoiceBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                AlertDialog.Builder build = new AlertDialog.Builder(InktagActivity.this);
+                FontChoiceDia = FontChoiceBuild.create();
                 LayoutInflater infl = getLayoutInflater();
                 LinearLayout r = (LinearLayout) infl.inflate(R.layout.font_choice_dialog,null);
                 fonts = (ListView) r.findViewById(R.id.FontList);
                 FontListAdapter ad = new FontListAdapter(getApplicationContext(),FontList);
                 fonts.setAdapter(ad);
-                build.setView(r);
+                FontChoiceBuild.setView(r);
 
-                build.setTitle("Choose Font").setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                FontChoiceBuild.setTitle("Choose Font").setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
 
@@ -133,6 +157,7 @@ public class InktagActivity extends AppCompatActivity {
                 final LinearLayout r = (LinearLayout) infl.inflate(R.layout.new_text_dialog,null);
                 AlertDialog.Builder build = new AlertDialog.Builder(InktagActivity.this);
                 final EditText t = (EditText) r.findViewById(R.id.TextContent);
+                t.setText(CurrentText.TextContent);
                 build.setView(r);
 
                 build.setTitle("Text Content").setPositiveButton("Confirm", new DialogInterface.OnClickListener() {
@@ -181,6 +206,7 @@ public class InktagActivity extends AppCompatActivity {
             this.TextPaint.setColor(Color.WHITE);
             this.TextPaint.setStyle(Paint.Style.FILL);
             this.TextPaint.setTextSize(30);
+            this.TextPaint.setAntiAlias(true);
         }
 
         @Override
@@ -213,8 +239,12 @@ public class InktagActivity extends AppCompatActivity {
                 canvas.drawBitmap(b,(getWidth() - b.getWidth()) / 2,(getHeight() - b.getHeight()) / 2,null);
 
                 if(HAS_TEXT){
-                    canvas.drawRect(new Rect((getWidth() - b.getWidth()) / 2,(int) pointerY - BOX_HEIGHT,((getWidth() - b.getWidth()) / 2) + b.getWidth(), (int)pointerY + BOX_HEIGHT),this.SelectionPaint);
-                    canvas.drawText(CurrentText.TextContent,30,pointerY,this.TextPaint);
+                    if(CurrentTypeFace != null){
+                        this.TextPaint.setTypeface(CurrentTypeFace);
+                    }
+
+                    canvas.drawRect(new Rect((getWidth() - b.getWidth()) / 2,(int) Math.floor(pointerY - this.TextPaint.getTextSize()),((getWidth() - b.getWidth()) / 2) + b.getWidth(), (int) Math.floor(pointerY + this.TextPaint.getTextSize())),this.SelectionPaint);
+                    canvas.drawText(CurrentText.TextContent,30,(pointerY + (this.TextPaint.getTextSize() / 2)),this.TextPaint);
                 }
             }
         }
@@ -262,6 +292,17 @@ public class InktagActivity extends AppCompatActivity {
             v.setTextSize(30);
             v.setTextScaleX(1);
             v.setTypeface(FontList.get(position).font);
+
+            final Typeface clickFace = FontList.get(position).font;
+
+            listItem.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    CurrentTypeFace = clickFace;
+                    FontChoiceDia.cancel();
+                }
+            });
+
             return listItem;
         }
     }
