@@ -30,6 +30,7 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -48,7 +49,7 @@ public class InktagActivity extends AppCompatActivity {
     private RelativeLayout MainStage;
     private InkCanvas can;
     private Uri FocusedImage;
-    private int SELECT_PICTURE = 1,BOX_HEIGHT = 100;
+    private int SELECT_PICTURE = 1,FONT_SIZE = 50;
     private FileService fs;
     private ArrayList<TextModule> Tags;
     private ArrayList<FontItem> FontList;
@@ -58,6 +59,7 @@ public class InktagActivity extends AppCompatActivity {
     private Typeface CurrentTypeFace;
     private AlertDialog.Builder FontChoiceBuild;
     private AlertDialog FontChoiceDia;
+    private SeekBar ZoomSeeker;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,7 +82,7 @@ public class InktagActivity extends AppCompatActivity {
         this.MainStage.addView(this.can);
         this.InitializeBottomButtons();
         this.CurrentText = new TextModule("No Text Available");
-
+        FontChoiceDia = FontChoiceBuild.create();
         //Load an image from the gallery.
         Intent intent = new Intent();
         intent.setType("image/*");
@@ -128,7 +130,6 @@ public class InktagActivity extends AppCompatActivity {
         this.FontChoiceBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                FontChoiceDia = FontChoiceBuild.create();
                 LayoutInflater infl = getLayoutInflater();
                 LinearLayout r = (LinearLayout) infl.inflate(R.layout.font_choice_dialog,null);
                 fonts = (ListView) r.findViewById(R.id.FontList);
@@ -136,17 +137,7 @@ public class InktagActivity extends AppCompatActivity {
                 fonts.setAdapter(ad);
                 FontChoiceBuild.setView(r);
 
-                FontChoiceBuild.setTitle("Choose Font").setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-
-                    }
-                }).setPositiveButton("Confirm", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-
-                    }
-                }).show();
+                FontChoiceDia = FontChoiceBuild.setTitle("Choose Font").show();
             }
         });
 
@@ -187,6 +178,36 @@ public class InktagActivity extends AppCompatActivity {
         public TextModule(String content){
             this.TextContent = content;
         }
+
+        //Function determines the length of string based on the width of the canvas
+        //and breaks the string into line segments.
+        public ArrayList<String> seperate(int width,Paint textPaint){
+            ArrayList<String> seperated = new ArrayList<String>();
+            String[] split = CurrentText.TextContent.split(" ");
+
+            //Determine the max length that the words can occupy.
+            //I.E it can only take up 80% of the screen.
+            float maxWidth = (float) ((float) can.getWidth() * 0.8);
+            String currentLine = "";
+
+            for(int i = 0;i < split.length;i++){
+                //First we need to use the paint object to determine the length of
+                //the currentline plus the length of the next word.
+                float paintLength = textPaint.measureText(currentLine + split[i]);
+                if(paintLength < maxWidth){
+                    currentLine += " " + split[i];
+
+                    if((i + 1) == split.length){
+                        seperated.add(currentLine);
+                    }
+                }else{
+                    seperated.add(currentLine);
+                    currentLine = "";
+                }
+            }
+
+            return seperated;
+        }
     }
 
     //Class for drawing different things onto the canvas.
@@ -205,8 +226,9 @@ public class InktagActivity extends AppCompatActivity {
             this.TextPaint = new Paint();
             this.TextPaint.setColor(Color.WHITE);
             this.TextPaint.setStyle(Paint.Style.FILL);
-            this.TextPaint.setTextSize(30);
+            this.TextPaint.setTextSize(FONT_SIZE);
             this.TextPaint.setAntiAlias(true);
+            this.TextPaint.setTextAlign(Paint.Align.CENTER);
         }
 
         @Override
@@ -238,14 +260,20 @@ public class InktagActivity extends AppCompatActivity {
                 Bitmap b = ScaleImage(fs.LoadBitmapFromUri(FocusedImage));
                 canvas.drawBitmap(b,(getWidth() - b.getWidth()) / 2,(getHeight() - b.getHeight()) / 2,null);
 
-                if(HAS_TEXT){
+
                     if(CurrentTypeFace != null){
                         this.TextPaint.setTypeface(CurrentTypeFace);
                     }
 
-                    canvas.drawRect(new Rect((getWidth() - b.getWidth()) / 2,(int) Math.floor(pointerY - this.TextPaint.getTextSize()),((getWidth() - b.getWidth()) / 2) + b.getWidth(), (int) Math.floor(pointerY + this.TextPaint.getTextSize())),this.SelectionPaint);
-                    canvas.drawText(CurrentText.TextContent,30,(pointerY + (this.TextPaint.getTextSize() / 2)),this.TextPaint);
-                }
+                    ArrayList<String> values = CurrentText.seperate(getWidth(),TextPaint);
+                    if(values == null){
+                        Toast.makeText(getApplicationContext(),"working",Toast.LENGTH_SHORT).show();
+                    }
+                    for(int i = 0;i < values.size();i++){
+                        canvas.drawText(values.get(i),(getWidth() / 2),(pointerY + (this.TextPaint.getTextSize() / 2)) + (i * this.TextPaint.getTextSize()),this.TextPaint);
+                    }
+                    //canvas.drawRect(new Rect((getWidth() - b.getWidth()) / 2,(int) Math.floor(pointerY - (this.TextPaint.getTextSize() * 2)),((getWidth() - b.getWidth()) / 2) + b.getWidth(), (int) Math.floor(pointerY + (this.TextPaint.getTextSize() * 2.5))),this.SelectionPaint);
+
             }
         }
 
@@ -291,6 +319,7 @@ public class InktagActivity extends AppCompatActivity {
             v.setText(FontList.get(position).fontName);
             v.setTextSize(30);
             v.setTextScaleX(1);
+            v.setTextColor(Color.WHITE);
             v.setTypeface(FontList.get(position).font);
 
             final Typeface clickFace = FontList.get(position).font;
@@ -299,7 +328,8 @@ public class InktagActivity extends AppCompatActivity {
                 @Override
                 public void onClick(View v) {
                     CurrentTypeFace = clickFace;
-                    FontChoiceDia.cancel();
+                    can.invalidate();
+                    FontChoiceDia.dismiss();
                 }
             });
 
