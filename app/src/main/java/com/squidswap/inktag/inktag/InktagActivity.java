@@ -352,4 +352,24 @@ public class InktagActivity extends AppCompatActivity implements ColorPickerDial
             return b;
         }
     }
+
+    //Class that will initialize creating an inkslice activity.
+    public static class TagBuilder extends Intent {
+        private Uri First;
+        private Context ctx;
+
+        public TagBuilder(Context ctx,String TempFileName){
+            super(ctx,InktagActivity.class);
+            TempFileName = TempFileName;
+            this.First = Uri.parse(ctx.getApplicationContext().getCacheDir() + "/" + TempFileName);
+            this.ctx = ctx;
+        }
+
+        //Starts the slicing activity.
+        public Intent start(){
+            this.putExtra("InkTagFile",this.First);
+            return this;
+        }
+    }
+
 }
