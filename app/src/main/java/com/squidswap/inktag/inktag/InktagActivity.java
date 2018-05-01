@@ -34,6 +34,9 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.jaredrummler.android.colorpicker.ColorPickerDialog;
+import com.jaredrummler.android.colorpicker.ColorPickerDialogListener;
+
 import org.w3c.dom.Text;
 
 import java.io.File;
@@ -43,7 +46,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class InktagActivity extends AppCompatActivity {
+public class InktagActivity extends AppCompatActivity implements ColorPickerDialogListener{
 
     private ImageButton AddButton,CheckButton,CancelButton,FontChoiceBtn,FontOptionButton;
     private RelativeLayout MainStage;
@@ -60,6 +63,15 @@ public class InktagActivity extends AppCompatActivity {
     private AlertDialog.Builder FontChoiceBuild;
     private AlertDialog FontChoiceDia;
     private SeekBar ZoomSeeker;
+
+    @Override public void onColorSelected(int dialogId, int color) {
+        CurrentText.TextColor = color;
+        can.invalidate();
+    }
+
+    @Override public void onDialogDismissed(int dialogId) {
+
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,7 +93,7 @@ public class InktagActivity extends AppCompatActivity {
         this.can = new InkCanvas(getApplicationContext());
         this.MainStage.addView(this.can);
         this.InitializeBottomButtons();
-        this.CurrentText = new TextModule("No Text Available");
+        this.CurrentText = new TextModule("");
         FontChoiceDia = FontChoiceBuild.create();
         //Load an image from the gallery.
         Intent intent = new Intent();
@@ -100,6 +112,7 @@ public class InktagActivity extends AppCompatActivity {
         }
     }
 
+
     private void InitializeBottomButtons(){
         this.AddButton = (ImageButton) findViewById(R.id.AddTextButton);
         this.FontChoiceBtn = (ImageButton) findViewById(R.id.EditFontButton);
@@ -108,22 +121,7 @@ public class InktagActivity extends AppCompatActivity {
         this.FontOptionButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                AlertDialog.Builder b = new AlertDialog.Builder(InktagActivity.this);
-                LayoutInflater infl = getLayoutInflater();
-                LinearLayout l = (LinearLayout) infl.inflate(R.layout.font_settings_dialog,null);
-                b.setView(l);
-
-                b.setTitle("Font Options").setPositiveButton("Confirm", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-
-                    }
-                }).setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-
-                    }
-                }).show();
+                ColorPickerDialog.newBuilder().show(InktagActivity.this);
             }
         });
 
@@ -174,9 +172,11 @@ public class InktagActivity extends AppCompatActivity {
         private float x,y;
         private boolean ShowBorders;
         private Typeface ChosenFont;
+        private int TextColor;
 
         public TextModule(String content){
             this.TextContent = content;
+            this.TextColor = Color.WHITE;
         }
 
         //Function determines the length of string based on the width of the canvas
@@ -266,9 +266,8 @@ public class InktagActivity extends AppCompatActivity {
                     }
 
                     ArrayList<String> values = CurrentText.seperate(getWidth(),TextPaint);
-                    if(values == null){
-                        Toast.makeText(getApplicationContext(),"working",Toast.LENGTH_SHORT).show();
-                    }
+                    this.TextPaint.setColor(CurrentText.TextColor);
+
                     for(int i = 0;i < values.size();i++){
                         canvas.drawText(values.get(i),(getWidth() / 2),(pointerY + (this.TextPaint.getTextSize() / 2)) + (i * this.TextPaint.getTextSize()),this.TextPaint);
                     }

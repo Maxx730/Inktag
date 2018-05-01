@@ -25,6 +25,7 @@
         android:fadeScrollbars="true">
 
         <LinearLayout
+            android:id="@+id/ColorChoices"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:orientation="horizontal">
